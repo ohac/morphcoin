@@ -35,8 +35,8 @@ CTxMemPool mempool;
 unsigned int nTransactionsUpdated = 0;
 
 map<uint256, CBlockIndex*> mapBlockIndex;
-uint256 hashGenesisBlock("0x12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2");
-static CBigNum bnProofOfWorkLimit(~uint256(0) >> 20); // Litecoin: starting difficulty is 1 / 2^12
+uint256 hashGenesisBlock("0x12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2"); // TODO
+static CBigNum bnProofOfWorkLimit(~uint256(0) >> 10); // TODO
 CBlockIndex* pindexGenesisBlock = NULL;
 int nBestHeight = -1;
 uint256 nBestChainWork = 0;
@@ -1626,7 +1626,9 @@ bool CBlock::ConnectBlock(CValidationState &state, CBlockIndex* pindex, CCoinsVi
 
     // Special case for the genesis block, skipping connection of its transactions
     // (its coinbase is unspendable)
-    if (GetHash() == hashGenesisBlock) {
+fprintf(stderr, "hh = %d\n", pindex->nHeight);
+    //if (GetHash() == hashGenesisBlock) // TODO
+    if (pindex->nHeight == 0) {
         view.SetBestBlock(pindex);
         pindexGenesisBlock = pindex;
         return true;
@@ -2176,7 +2178,8 @@ bool CBlock::AcceptBlock(CValidationState &state, CDiskBlockPos *dbp)
     // Get prev block index
     CBlockIndex* pindexPrev = NULL;
     int nHeight = 0;
-    if (hash != hashGenesisBlock) {
+//  if (hash != hashGenesisBlock) // TODO
+    if (mapBlockIndex.empty()) {
         map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(hashPrevBlock);
         if (mi == mapBlockIndex.end())
             return state.DoS(10, error("AcceptBlock() : prev block not found"));
@@ -2758,6 +2761,7 @@ bool LoadBlockIndex()
     return true;
 }
 
+const char* pszTimestamp = "morph";
 
 bool InitBlockIndex() {
     // Check whether we're already initialized
@@ -2779,7 +2783,6 @@ bool InitBlockIndex() {
         //   vMerkleTree: 97ddfbbae6
 
         // Genesis block
-        const char* pszTimestamp = "NY Times 05/Oct/2011 Steve Jobs, Apple’s Visionary, Dies at 56";
         CTransaction txNew;
         txNew.vin.resize(1);
         txNew.vout.resize(1);
@@ -2792,13 +2795,20 @@ bool InitBlockIndex() {
         block.hashMerkleRoot = block.BuildMerkleTree();
         block.nVersion = 1;
         block.nTime    = 1317972665;
-        block.nBits    = 0x1e0ffff0;
-        block.nNonce   = 2084524493;
+        block.nBits = bnProofOfWorkLimit.GetCompact();
 
         if (fTestNet)
         {
             block.nTime    = 1317798646;
-            block.nNonce   = 385270584;
+        }
+        uint256 hashTarget = CBigNum().SetCompact(block.nBits).getuint256();
+        for (int nn = 0; nn >= 0; nn++) {
+            block.nNonce = nn;
+            if ((nn & 0x0000ffff) == 0) printf("nn = %d\n", nn);
+            uint256 hash = block.GetPoWHash();
+            if (hash > hashTarget) continue;
+            printf("proof-of-work found\n  nn: %d\n  hash: %s  \ntarget: %s\n", nn, hash.GetHex().c_str(), hashTarget.GetHex().c_str());
+            break;
         }
 
         //// debug print
@@ -2806,9 +2816,9 @@ bool InitBlockIndex() {
         printf("%s\n", hash.ToString().c_str());
         printf("%s\n", hashGenesisBlock.ToString().c_str());
         printf("%s\n", block.hashMerkleRoot.ToString().c_str());
-        assert(block.hashMerkleRoot == uint256("0x97ddfbbae6be97fd6cdf3e7ca13232a3afff2353e29badfab7f73011edd4ced9"));
+// TODO assert(block.hashMerkleRoot == uint256("0x97ddfbbae6be97fd6cdf3e7ca13232a3afff2353e29badfab7f73011edd4ced9"));
         block.print();
-        assert(hash == hashGenesisBlock);
+// TODO assert(hash == hashGenesisBlock);
 
         // Start new block file
         try {

@@ -191,6 +191,10 @@ bool AppInit(int argc, char* argv[])
             fprintf(stdout, "%s", strUsage.c_str());
             return false;
         }
+        if (mapArgs.count("-timestamp")) {
+            extern const char* pszTimestamp;
+            pszTimestamp = mapArgs["-timestamp"].c_str();
+        }
 
         // Command-line RPC
         for (int i = 1; i < argc; i++)
