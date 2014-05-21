@@ -1084,10 +1084,10 @@ const boost::filesystem::path &GetDataDir(bool fNetSpecific)
     }
     if (mapArgs.count("-coinname")) {
         path /= mapArgs["-coinname"];
-	}
-	else {
+    }
+    else {
         path /= "default";
-	}
+    }
     if (fNetSpecific && GetBoolArg("-testnet", false))
         path /= "testnet3";
 
