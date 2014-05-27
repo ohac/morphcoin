@@ -191,9 +191,30 @@ bool AppInit(int argc, char* argv[])
             fprintf(stdout, "%s", strUsage.c_str());
             return false;
         }
+
         if (mapArgs.count("-timestamp")) {
             extern const char* pszTimestamp;
             pszTimestamp = mapArgs["-timestamp"].c_str();
+        }
+        if (mapArgs.count("-noncegenesisblock")) {
+            extern unsigned int nonceGenesisBlock;
+            nonceGenesisBlock = atoi(mapArgs["-noncegenesisblock"].c_str());
+        }
+        if (mapArgs.count("-hashgenesisblock")) {
+            extern uint256 hashGenesisBlock;
+            hashGenesisBlock = uint256(mapArgs["-hashgenesisblock"].c_str());
+        }
+        if (mapArgs.count("-hashmerkleroot")) {
+            extern uint256 hashGBMerkleRoot;
+            hashGBMerkleRoot = uint256(mapArgs["-hashmerkleroot"].c_str());
+        }
+        if (mapArgs.count("-proofofworklimit")) {
+            extern CBigNum bnProofOfWorkLimit;
+            bnProofOfWorkLimit = CBigNum(~uint256(0) >> atoi(mapArgs["-proofofworklimit"].c_str()));
+        }
+        if (mapArgs.count("-checkgenesisblock")) {
+            extern bool checkGenesisBlock;
+            checkGenesisBlock = atoi(mapArgs["-checkgenesisblock"].c_str()) != 0;
         }
 
         // Command-line RPC

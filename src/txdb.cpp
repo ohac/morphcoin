@@ -223,9 +223,14 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
                 pindexNew->nTx            = diskindex.nTx;
 
                 // Watch for genesis block
-                // TODO if (pindexGenesisBlock == NULL && diskindex.GetBlockHash() == hashGenesisBlock)
-                if (pindexGenesisBlock == NULL && diskindex.nHeight == 0)
-                    pindexGenesisBlock = pindexNew;
+                if (pindexGenesisBlock == NULL) {
+                    extern bool checkGenesisBlock;
+                    if (checkGenesisBlock ?
+                            diskindex.GetBlockHash() == hashGenesisBlock :
+                            diskindex.nHeight == 0) {
+                        pindexGenesisBlock = pindexNew;
+                    }
+                }
 
                 if (!pindexNew->CheckIndex())
                     return error("LoadBlockIndex() : CheckIndex failed: %s", pindexNew->ToString().c_str());

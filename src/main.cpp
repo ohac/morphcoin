@@ -35,8 +35,11 @@ CTxMemPool mempool;
 unsigned int nTransactionsUpdated = 0;
 
 map<uint256, CBlockIndex*> mapBlockIndex;
-uint256 hashGenesisBlock("0x12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2"); // TODO
-static CBigNum bnProofOfWorkLimit(~uint256(0) >> 10); // TODO
+bool checkGenesisBlock = true;
+uint256 hashGenesisBlock;
+uint256 hashGBMerkleRoot;
+CBigNum bnProofOfWorkLimit(~uint256(0) >> 10);
+unsigned int nonceGenesisBlock;
 CBlockIndex* pindexGenesisBlock = NULL;
 int nBestHeight = -1;
 uint256 nBestChainWork = 0;
@@ -1626,9 +1629,8 @@ bool CBlock::ConnectBlock(CValidationState &state, CBlockIndex* pindex, CCoinsVi
 
     // Special case for the genesis block, skipping connection of its transactions
     // (its coinbase is unspendable)
-fprintf(stderr, "hh = %d\n", pindex->nHeight);
-    //if (GetHash() == hashGenesisBlock) // TODO
-    if (pindex->nHeight == 0) {
+    if (checkGenesisBlock ? GetHash() == hashGenesisBlock :
+            pindex->nHeight == 0) {
         view.SetBestBlock(pindex);
         pindexGenesisBlock = pindex;
         return true;
@@ -2178,8 +2180,7 @@ bool CBlock::AcceptBlock(CValidationState &state, CDiskBlockPos *dbp)
     // Get prev block index
     CBlockIndex* pindexPrev = NULL;
     int nHeight = 0;
-//  if (hash != hashGenesisBlock) // TODO
-    if (mapBlockIndex.empty()) {
+    if (checkGenesisBlock ? hash != hashGenesisBlock : mapBlockIndex.empty()) {
         map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(hashPrevBlock);
         if (mi == mapBlockIndex.end())
             return state.DoS(10, error("AcceptBlock() : prev block not found"));
@@ -2802,13 +2803,19 @@ bool InitBlockIndex() {
             block.nTime    = 1317798646;
         }
         uint256 hashTarget = CBigNum().SetCompact(block.nBits).getuint256();
-        for (int nn = 0; nn >= 0; nn++) {
-            block.nNonce = nn;
-            if ((nn & 0x0000ffff) == 0) printf("nn = %d\n", nn);
+        block.nNonce = nonceGenesisBlock;
+        {
             uint256 hash = block.GetPoWHash();
-            if (hash > hashTarget) continue;
-            printf("proof-of-work found\n  nn: %d\n  hash: %s  \ntarget: %s\n", nn, hash.GetHex().c_str(), hashTarget.GetHex().c_str());
-            break;
+            if (hash > hashTarget) {
+                for (int nn = 0; nn >= 0; nn++) {
+                    block.nNonce = nn;
+                    if ((nn & 0x0000ffff) == 0) printf("nn = %d\n", nn);
+                    hash = block.GetPoWHash();
+                    if (hash > hashTarget) continue;
+                    printf("proof-of-work found\n  nn: %d\n  hash: %s  \ntarget: %s\n", nn, hash.GetHex().c_str(), hashTarget.GetHex().c_str());
+                    break;
+                }
+            }
         }
 
         //// debug print
@@ -2816,9 +2823,13 @@ bool InitBlockIndex() {
         printf("%s\n", hash.ToString().c_str());
         printf("%s\n", hashGenesisBlock.ToString().c_str());
         printf("%s\n", block.hashMerkleRoot.ToString().c_str());
-// TODO assert(block.hashMerkleRoot == uint256("0x97ddfbbae6be97fd6cdf3e7ca13232a3afff2353e29badfab7f73011edd4ced9"));
+        if (checkGenesisBlock) {
+            assert(block.hashMerkleRoot == hashGBMerkleRoot);
+        }
         block.print();
-// TODO assert(hash == hashGenesisBlock);
+        if (checkGenesisBlock) {
+            assert(hash == hashGenesisBlock);
+        }
 
         // Start new block file
         try {
