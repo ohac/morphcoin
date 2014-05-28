@@ -150,6 +150,8 @@ void HandleSIGHUP(int)
 
 
 
+int pubkeyAddress = 48;
+int privkeyAddress = pubkeyAddress + 128;
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -196,6 +198,10 @@ bool AppInit(int argc, char* argv[])
             extern const char* pszTimestamp;
             pszTimestamp = mapArgs["-timestamp"].c_str();
         }
+        if (mapArgs.count("-timegenesisblock")) {
+            extern unsigned int timeGenesisBlock;
+            timeGenesisBlock = atoi(mapArgs["-timegenesisblock"].c_str());
+        }
         if (mapArgs.count("-noncegenesisblock")) {
             extern unsigned int nonceGenesisBlock;
             nonceGenesisBlock = atoi(mapArgs["-noncegenesisblock"].c_str());
@@ -215,6 +221,37 @@ bool AppInit(int argc, char* argv[])
         if (mapArgs.count("-checkgenesisblock")) {
             extern bool checkGenesisBlock;
             checkGenesisBlock = atoi(mapArgs["-checkgenesisblock"].c_str()) != 0;
+        }
+        if (mapArgs.count("-messagestart")) {
+            extern unsigned char pchMessageStart[4];
+            int vs[4];
+            assert(sscanf(mapArgs["-messagestart"].c_str(), "%x,%x,%x,%x", &vs[0], &vs[1], &vs[2], &vs[3]) == 4);
+            pchMessageStart[0] = vs[0];
+            pchMessageStart[1] = vs[1];
+            pchMessageStart[2] = vs[2];
+            pchMessageStart[3] = vs[3];
+        }
+        if (mapArgs.count("-pubkeyaddress")) {
+            pubkeyAddress = atoi(mapArgs["-pubkeyaddress"].c_str());
+            privkeyAddress = pubkeyAddress + 128;
+        }
+        if (mapArgs.count("-subsidyhalf")) {
+            extern int subsidyHalf;
+            subsidyHalf = atoi(mapArgs["-subsidyhalf"].c_str());
+        }
+        if (mapArgs.count("-targettimespan")) {
+            extern int64 nTargetTimespan;
+            extern int64 nTargetSpacing;
+            extern int64 nInterval;
+            nTargetTimespan = atoi(mapArgs["-targettimespan"].c_str());
+            nInterval = nTargetTimespan / nTargetSpacing;
+        }
+        if (mapArgs.count("-targetspacing")) {
+            extern int64 nTargetTimespan;
+            extern int64 nTargetSpacing;
+            extern int64 nInterval;
+            nTargetSpacing = atoi(mapArgs["-targetspacing"].c_str());
+            nInterval = nTargetTimespan / nTargetSpacing;
         }
 
         // Command-line RPC

@@ -267,19 +267,21 @@ public:
     bool operator()(const CNoDestination &no) const;
 };
 
+extern int pubkeyAddress;
+extern int privkeyAddress;
+
 class CBitcoinAddress : public CBase58Data
 {
 public:
     enum
     {
-        PUBKEY_ADDRESS = 48, // Litecoin addresses start with L TODO
         SCRIPT_ADDRESS = 5,
         PUBKEY_ADDRESS_TEST = 111,
         SCRIPT_ADDRESS_TEST = 196,
     };
 
     bool Set(const CKeyID &id) {
-        SetData(fTestNet ? PUBKEY_ADDRESS_TEST : PUBKEY_ADDRESS, &id, 20);
+        SetData(fTestNet ? PUBKEY_ADDRESS_TEST : pubkeyAddress, &id, 20);
         return true;
     }
 
@@ -297,28 +299,30 @@ public:
     {
         unsigned int nExpectedSize = 20;
         bool fExpectTestNet = false;
-        switch(nVersion)
-        {
-            case PUBKEY_ADDRESS:
-                nExpectedSize = 20; // Hash of public key
-                fExpectTestNet = false;
-                break;
-            case SCRIPT_ADDRESS:
-                nExpectedSize = 20; // Hash of CScript
-                fExpectTestNet = false;
-                break;
+        if (nVersion == pubkeyAddress) {
+            nExpectedSize = 20; // Hash of public key
+            fExpectTestNet = false;
+        }
+        else {
+            switch(nVersion)
+            {
+                case SCRIPT_ADDRESS:
+                    nExpectedSize = 20; // Hash of CScript
+                    fExpectTestNet = false;
+                    break;
 
-            case PUBKEY_ADDRESS_TEST:
-                nExpectedSize = 20;
-                fExpectTestNet = true;
-                break;
-            case SCRIPT_ADDRESS_TEST:
-                nExpectedSize = 20;
-                fExpectTestNet = true;
-                break;
+                case PUBKEY_ADDRESS_TEST:
+                    nExpectedSize = 20;
+                    fExpectTestNet = true;
+                    break;
+                case SCRIPT_ADDRESS_TEST:
+                    nExpectedSize = 20;
+                    fExpectTestNet = true;
+                    break;
 
-            default:
-                return false;
+                default:
+                    return false;
+            }
         }
         return fExpectTestNet == fTestNet && vchData.size() == nExpectedSize;
     }
@@ -345,8 +349,12 @@ public:
     CTxDestination Get() const {
         if (!IsValid())
             return CNoDestination();
+        if (nVersion == pubkeyAddress) {
+            uint160 id;
+            memcpy(&id, &vchData[0], 20);
+            return CKeyID(id);
+        }
         switch (nVersion) {
-        case PUBKEY_ADDRESS:
         case PUBKEY_ADDRESS_TEST: {
             uint160 id;
             memcpy(&id, &vchData[0], 20);
@@ -365,8 +373,13 @@ public:
     bool GetKeyID(CKeyID &keyID) const {
         if (!IsValid())
             return false;
+        if (nVersion == pubkeyAddress) {
+            uint160 id;
+            memcpy(&id, &vchData[0], 20);
+            keyID = CKeyID(id);
+            return true;
+        }
         switch (nVersion) {
-        case PUBKEY_ADDRESS:
         case PUBKEY_ADDRESS_TEST: {
             uint160 id;
             memcpy(&id, &vchData[0], 20);
@@ -400,14 +413,13 @@ class CBitcoinSecret : public CBase58Data
 public:
     enum
     {
-        PRIVKEY_ADDRESS = CBitcoinAddress::PUBKEY_ADDRESS + 128,
         PRIVKEY_ADDRESS_TEST = CBitcoinAddress::PUBKEY_ADDRESS_TEST + 128,
     };
 
     void SetKey(const CKey& vchSecret)
     {
         assert(vchSecret.IsValid());
-        SetData(fTestNet ? PRIVKEY_ADDRESS_TEST : PRIVKEY_ADDRESS, vchSecret.begin(), vchSecret.size());
+        SetData(fTestNet ? PRIVKEY_ADDRESS_TEST : privkeyAddress, vchSecret.begin(), vchSecret.size());
         if (vchSecret.IsCompressed())
             vchData.push_back(1);
     }
@@ -422,17 +434,16 @@ public:
     bool IsValid() const
     {
         bool fExpectTestNet = false;
-        switch(nVersion)
-        {
-            case PRIVKEY_ADDRESS:
-                break;
+        if (nVersion != privkeyAddress) {
+            switch(nVersion)
+            {
+                case PRIVKEY_ADDRESS_TEST:
+                    fExpectTestNet = true;
+                    break;
 
-            case PRIVKEY_ADDRESS_TEST:
-                fExpectTestNet = true;
-                break;
-
-            default:
-                return false;
+                default:
+                    return false;
+            }
         }
         return fExpectTestNet == fTestNet && (vchData.size() == 32 || (vchData.size() == 33 && vchData[32] == 1));
     }

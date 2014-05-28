@@ -39,6 +39,7 @@ bool checkGenesisBlock = true;
 uint256 hashGenesisBlock;
 uint256 hashGBMerkleRoot;
 CBigNum bnProofOfWorkLimit(~uint256(0) >> 10);
+unsigned int timeGenesisBlock;
 unsigned int nonceGenesisBlock;
 CBlockIndex* pindexGenesisBlock = NULL;
 int nBestHeight = -1;
@@ -1085,19 +1086,21 @@ uint256 static GetOrphanRoot(const CBlockHeader* pblock)
     return pblock->GetHash();
 }
 
+int subsidyHalf = 84000; // Litecoin: 840k blocks in ~4 years
+
 int64 static GetBlockValue(int nHeight, int64 nFees)
 {
     int64 nSubsidy = 50 * COIN; // TODO
 
     // Subsidy is cut in half every 840000 blocks, which will occur approximately every 4 years
-    nSubsidy >>= (nHeight / 840000); // Litecoin: 840k blocks in ~4 years // TODO
+    nSubsidy >>= (nHeight / subsidyHalf);
 
     return nSubsidy + nFees;
 }
 
-static const int64 nTargetTimespan = 3.5 * 24 * 60 * 60; // Litecoin: 3.5 days // TODO
-static const int64 nTargetSpacing = 2.5 * 60; // Litecoin: 2.5 minutes // TODO
-static const int64 nInterval = nTargetTimespan / nTargetSpacing;
+int64 nTargetTimespan = 3.5 * 24 * 60 * 60; // Litecoin: 3.5 days
+int64 nTargetSpacing = 2.5 * 60; // Litecoin: 2.5 minutes
+int64 nInterval = nTargetTimespan / nTargetSpacing;
 
 //
 // minimum amount of work that could possibly be required nTime after
@@ -2795,7 +2798,7 @@ bool InitBlockIndex() {
         block.hashPrevBlock = 0;
         block.hashMerkleRoot = block.BuildMerkleTree();
         block.nVersion = 1;
-        block.nTime    = 1317972665; // TODO
+        block.nTime    = timeGenesisBlock;
         block.nBits = bnProofOfWorkLimit.GetCompact();
 
         if (fTestNet)
@@ -3101,7 +3104,6 @@ bool static AlreadyHave(const CInv& inv)
 // The characters are rarely used upper ASCII, not valid as UTF-8, and produce
 // a large 4-byte int at any alignment.
 unsigned char pchMessageStart[4] = { 0xfb, 0xc0, 0xb6, 0xdb }; // Litecoin: increase each by adding 2 to bitcoin's value.
-// TODO
 
 
 void static ProcessGetData(CNode* pfrom)
