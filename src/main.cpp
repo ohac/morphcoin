@@ -1072,6 +1072,21 @@ CBlockIndex* FindBlockByHeight(int nHeight)
     return pblockindex;
 }
 
+uint256 CBlock::GetPoWHash() const
+{
+    int type = GetArg("-powhash", 0);
+    switch (type) {
+    case 1: // SHA-256
+        return Hash(BEGIN(nVersion), END(nNonce));
+    default: // Scrypt
+        {
+            uint256 thash;
+            scrypt_1024_1_1_256(BEGIN(nVersion), BEGIN(thash));
+            return thash;
+        }
+    }
+}
+
 bool CBlock::ReadFromDisk(const CBlockIndex* pindex)
 {
     if (!ReadFromDisk(pindex->GetBlockPos()))
@@ -1275,7 +1290,7 @@ unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBl
     switch (type) {
     case 1:
         return GetNextWorkRequired_DigiShieldV2(pindexLast, pblock, 8);
-	default:
+    default:
         return GetNextWorkRequired_Original(pindexLast, pblock);
     }
 }
