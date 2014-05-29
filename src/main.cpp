@@ -1072,12 +1072,49 @@ CBlockIndex* FindBlockByHeight(int nHeight)
     return pblockindex;
 }
 
+template<typename T1>
+inline uint256 Hash1(const T1 pbegin, const T1 pend,
+        const bool find = false, const char *trip = NULL,
+        const int triplen = 0)
+{
+    static unsigned char pblank[1];
+    uint160 hash1 = 0;
+    SHA1((pbegin == pend ? pblank : (unsigned char*)&pbegin[0]),
+            (pend - pbegin) * sizeof(pbegin[0]), (unsigned char*)&hash1);
+    std::string str = EncodeBase64((const unsigned char *)hash1.begin(), hash1.size());
+    char output[38]; // 26 + 11 + 1
+    memcpy(output, str.c_str(), 26);
+    memcpy(&output[26], output, 11);
+    output[37] = 0;
+    uint256 hash3 = 0;
+    for (int i = 0; i < 26; i++) {
+        uint256 hash2 = 0;
+        SHA1((unsigned char*)&output[i], 12, (unsigned char*)&hash2);
+        hash3 ^= hash2;
+        if (find) {
+            // 2ch trip finder
+            char output2[12 + 1] = "";
+            hash2 <<= 96;
+            str = EncodeBase64((const unsigned char *)hash2.begin() + 12, 9);
+            memcpy(output2, str.c_str(), 12);
+            if (memcmp(output2, trip, triplen) == 0) {
+                char tripkey[13] = "";
+                memcpy(tripkey, &output[i], 12);
+                printf("tripkey: #%s, trip: %s\n", tripkey, output2);
+            }
+        }
+    }
+    return hash3 << 96; // TODO fill another 96 bits if difficulty is too high
+}
+
 uint256 CBlock::GetPoWHash() const
 {
     int type = GetArg("-powhash", 0);
     switch (type) {
     case 1: // SHA-256
         return Hash(BEGIN(nVersion), END(nNonce));
+    case 2: // SHA-1
+        return Hash1(BEGIN(nVersion), END(nNonce));
     default: // Scrypt
         {
             uint256 thash;
